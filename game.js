@@ -54,7 +54,7 @@
       size: 64,
       cooldown: 260,
       imageMode: "path",
-      imagePath: "assets/weapon_bat.png",
+      imagePath: "weapon_bat.png",
     },
     {
       id: "ball",
@@ -65,7 +65,7 @@
       size: 46,
       cooldown: 170,
       imageMode: "path",
-      imagePath: "assets/weapon_ball.png",
+      imagePath: "weapon_ball.png",
     },
     {
       id: "bomb",
@@ -76,7 +76,7 @@
       size: 74,
       cooldown: 700,
       imageMode: "path",
-      imagePath: "assets/weapon_bomb.png",
+      imagePath: "weapon_bomb.png",
     },
     {
       id: "glove",
@@ -87,7 +87,7 @@
       size: 68,
       cooldown: 360,
       imageMode: "path",
-      imagePath: "assets/weapon_glove.png",
+      imagePath: "weapon_glove.png",
     },
     {
       id: "anvil",
@@ -98,20 +98,20 @@
       size: 72,
       cooldown: 650,
       imageMode: "path",
-      imagePath: "assets/weapon_anvil.png",
+      imagePath: "weapon_anvil.png",
     },
   ];
 
   const defaultLooks = {
     background: {
       mode: "path",
-      path: "assets/bg_room.png",
+      path: "bg_room.png",
       key: "",
       originalPath: "",
     },
     buddy: {
       mode: "path",
-      path: "assets/buddy.png",
+      path: "buddy.png",
       key: "",
       originalPath: "",
     },
@@ -151,13 +151,13 @@
   };
 
   const bg = new Image();
-  bg.src = "assets/bg_room.png";
+  bg.src = "bg_room.png";
   const buddyImg = new Image();
-  buddyImg.src = "assets/buddy.png";
+  buddyImg.src = "buddy.png";
   const buddyDazedImg = new Image();
-  buddyDazedImg.src = "assets/buddy_dazed.png";
+  buddyDazedImg.src = "buddy_dazed.png";
   const starImg = new Image();
-  starImg.src = "assets/fx_star.png";
+  starImg.src = "fx_star.png";
 
   function openDB() {
     return new Promise((resolve, reject) => {
@@ -245,14 +245,14 @@
   }
 
   function refreshLookImages() {
-    const bgSrc = lookSource("background") || "assets/bg_room.png";
-    const buddySrc = lookSource("buddy") || "assets/buddy.png";
+    const bgSrc = lookSource("background") || "bg_room.png";
+    const buddySrc = lookSource("buddy") || "buddy.png";
 
     bg.src = bgSrc;
     buddyImg.src = buddySrc;
 
     // If a custom buddy is used, use it for the dazed state too. The stars still show dizziness.
-    buddyDazedImg.src = buddySrc || "assets/buddy_dazed.png";
+    buddyDazedImg.src = buddySrc || "buddy_dazed.png";
 
     if (ui.bgPath) ui.bgPath.value = state.looks.background.mode === "path" ? state.looks.background.path : "";
     if (ui.buddyPath) ui.buddyPath.value = state.looks.buddy.mode === "path" ? state.looks.buddy.path : "";
@@ -369,7 +369,7 @@
       img.src = imageForWeapon(w);
       img.alt = w.name;
       img.onerror = () => {
-        img.src = "assets/weapon_bat.png";
+        img.src = "weapon_bat.png";
       };
 
       const text = document.createElement("div");
@@ -917,7 +917,7 @@
     const path = ui.path.value.trim();
 
     let imageMode = "path";
-    let imagePath = path || "assets/weapon_bat.png";
+    let imagePath = path || "weapon_bat.png";
     let imageKey = "";
 
     if (file) {
