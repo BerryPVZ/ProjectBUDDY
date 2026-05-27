@@ -35,6 +35,13 @@
     path: $("weaponPath"),
     preview: $("weaponPreview"),
     saveWeapon: $("btnSaveWeapon"),
+    btnResetLooks: $("btnResetLooks"),
+    bgUpload: $("bgUpload"),
+    bgPath: $("bgPath"),
+    btnApplyBg: $("btnApplyBg"),
+    buddyUpload: $("buddyUpload"),
+    buddyPath: $("buddyPath"),
+    btnApplyBuddy: $("btnApplyBuddy"),
   };
 
   const defaultWeapons = [
@@ -95,10 +102,26 @@
     },
   ];
 
+  const defaultLooks = {
+    background: {
+      mode: "path",
+      path: "assets/bg_room.png",
+      key: "",
+      originalPath: "",
+    },
+    buddy: {
+      mode: "path",
+      path: "assets/buddy.png",
+      key: "",
+      originalPath: "",
+    },
+  };
+
   const state = {
     weapons: [],
     imageUrls: new Map(),
     images: new Map(),
+    looks: JSON.parse(JSON.stringify(defaultLooks)),
     selectedId: "bat",
     coins: 0,
     combo: 1,
@@ -204,6 +227,37 @@
     return w.imageMode === "upload" ? state.imageUrls.get(w.imageKey) : w.imagePath;
   }
 
+  function lookSource(kind) {
+    const look = state.looks[kind] || defaultLooks[kind];
+    return look.mode === "upload" ? state.imageUrls.get(look.key) : look.path;
+  }
+
+  function sanitizeLook(raw, fallback) {
+    const base = fallback || { mode: "path", path: "", key: "", originalPath: "" };
+    const out = {
+      mode: raw && raw.mode === "upload" ? "upload" : "path",
+      path: String((raw && raw.path) || base.path || ""),
+      key: String((raw && raw.key) || ""),
+      originalPath: String((raw && raw.originalPath) || ""),
+    };
+    if (out.mode !== "upload" && !out.path) out.path = base.path || "";
+    return out;
+  }
+
+  function refreshLookImages() {
+    const bgSrc = lookSource("background") || "assets/bg_room.png";
+    const buddySrc = lookSource("buddy") || "assets/buddy.png";
+
+    bg.src = bgSrc;
+    buddyImg.src = buddySrc;
+
+    // If a custom buddy is used, use it for the dazed state too. The stars still show dizziness.
+    buddyDazedImg.src = buddySrc || "assets/buddy_dazed.png";
+
+    if (ui.bgPath) ui.bgPath.value = state.looks.background.mode === "path" ? state.looks.background.path : "";
+    if (ui.buddyPath) ui.buddyPath.value = state.looks.buddy.mode === "path" ? state.looks.buddy.path : "";
+  }
+
   function preloadImage(src) {
     if (!src) return null;
     if (state.images.has(src)) return state.images.get(src);
@@ -224,10 +278,20 @@
       }
     }
 
+    for (const kind of ["background", "buddy"]) {
+      const look = state.looks[kind];
+      if (look && look.mode === "upload" && look.key) {
+        const blob = await idbGet(look.key);
+        if (blob) state.imageUrls.set(look.key, URL.createObjectURL(blob));
+      }
+    }
+
     for (const w of state.weapons) {
       const src = imageForWeapon(w);
       if (src) preloadImage(src);
     }
+
+    refreshLookImages();
   }
 
   function sanitizeWeapon(w) {
@@ -251,6 +315,10 @@
       projectVersion: state.projectVersion,
       selectedId: state.selectedId,
       coins: state.coins,
+      looks: {
+        background: sanitizeLook(state.looks.background, defaultLooks.background),
+        buddy: sanitizeLook(state.looks.buddy, defaultLooks.buddy),
+      },
       weapons: state.weapons.map(sanitizeWeapon),
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(serial));
@@ -274,6 +342,10 @@
       state.selectedId = loaded.selectedId || "bat";
       state.coins = Number(loaded.coins) || 0;
       state.projectName = loaded.projectName || "Buddy Build Project";
+      if (loaded.looks) {
+        state.looks.background = sanitizeLook(loaded.looks.background, defaultLooks.background);
+        state.looks.buddy = sanitizeLook(loaded.looks.buddy, defaultLooks.buddy);
+      }
     }
 
     await rebuildImageUrls();
@@ -938,8 +1010,33 @@
       projectName: state.projectName,
       selectedId: state.selectedId,
       coins: state.coins,
+      looks: {
+        background: sanitizeLook(state.looks.background, defaultLooks.background),
+        buddy: sanitizeLook(state.looks.buddy, defaultLooks.buddy),
+      },
       weapons: [],
     };
+
+    for (const kind of ["background", "buddy"]) {
+      const look = sanitizeLook(state.looks[kind], defaultLooks[kind]);
+      const copy = { ...look };
+
+      if (copy.mode === "upload" && copy.key) {
+        const blob = await idbGet(copy.key);
+        const dataUrl = blob ? await blobToDataUrl(blob) : "";
+        copy.imageData = dataUrl;
+        copy.path = dataUrl;
+      } else if (copy.mode === "path" && copy.path) {
+        const dataUrl = await pathToDataUrl(copy.path);
+        if (dataUrl) {
+          copy.originalPath = copy.path;
+          copy.imageData = dataUrl;
+          copy.path = dataUrl;
+        }
+      }
+
+      out.looks[kind] = copy;
+    }
 
     for (const w of state.weapons.map(sanitizeWeapon)) {
       const copy = { ...w };
@@ -1001,6 +1098,32 @@
 
       const custom = imported.filter(w => !defaultWeapons.some(d => d.id === w.id));
       state.weapons = [...defaultWeapons.map(sanitizeWeapon), ...custom];
+
+      state.looks = JSON.parse(JSON.stringify(defaultLooks));
+      if (data.looks) {
+        for (const kind of ["background", "buddy"]) {
+          const rawLook = data.looks[kind];
+          if (!rawLook) continue;
+
+          const exportedLookData =
+            rawLook.imageData ||
+            (typeof rawLook.path === "string" && rawLook.path.startsWith("data:") ? rawLook.path : "");
+
+          if (exportedLookData) {
+            const newKey = uid("img");
+            await idbPut(newKey, dataUrlToBlob(exportedLookData));
+            state.looks[kind] = {
+              mode: "upload",
+              path: "",
+              key: newKey,
+              originalPath: rawLook.originalPath || "",
+            };
+          } else {
+            state.looks[kind] = sanitizeLook(rawLook, defaultLooks[kind]);
+          }
+        }
+      }
+
       state.selectedId = data.selectedId || state.weapons[0].id;
       state.coins = Number(data.coins) || 0;
       state.projectName = data.projectName || "Buddy Build Project";
@@ -1016,11 +1139,97 @@
     }
   });
 
+  async function setLookFromUpload(kind, file) {
+    if (!file) return false;
+
+    const old = state.looks[kind];
+    if (old && old.mode === "upload" && old.key) {
+      const oldUrl = state.imageUrls.get(old.key);
+      if (oldUrl) URL.revokeObjectURL(oldUrl);
+      state.imageUrls.delete(old.key);
+      await idbDelete(old.key);
+    }
+
+    const key = uid("img");
+    await idbPut(key, file);
+    state.looks[kind] = {
+      mode: "upload",
+      path: "",
+      key,
+      originalPath: "",
+    };
+    await rebuildImageUrls();
+    saveMeta();
+    return true;
+  }
+
+  async function setLookFromPath(kind, path) {
+    path = String(path || "").trim();
+    if (!path) return false;
+
+    const old = state.looks[kind];
+    if (old && old.mode === "upload" && old.key) {
+      const oldUrl = state.imageUrls.get(old.key);
+      if (oldUrl) URL.revokeObjectURL(oldUrl);
+      state.imageUrls.delete(old.key);
+      await idbDelete(old.key);
+    }
+
+    state.looks[kind] = {
+      mode: "path",
+      path,
+      key: "",
+      originalPath: path,
+    };
+    await rebuildImageUrls();
+    saveMeta();
+    return true;
+  }
+
+  if (ui.bgUpload) {
+    ui.bgUpload.addEventListener("change", async () => {
+      const ok = await setLookFromUpload("background", ui.bgUpload.files?.[0]);
+      if (ok) ui.bgUpload.value = "";
+    });
+  }
+
+  if (ui.buddyUpload) {
+    ui.buddyUpload.addEventListener("change", async () => {
+      const ok = await setLookFromUpload("buddy", ui.buddyUpload.files?.[0]);
+      if (ok) ui.buddyUpload.value = "";
+    });
+  }
+
+  if (ui.btnApplyBg) {
+    ui.btnApplyBg.addEventListener("click", async () => {
+      await setLookFromPath("background", ui.bgPath.value);
+    });
+  }
+
+  if (ui.btnApplyBuddy) {
+    ui.btnApplyBuddy.addEventListener("click", async () => {
+      await setLookFromPath("buddy", ui.buddyPath.value);
+    });
+  }
+
+  if (ui.btnResetLooks) {
+    ui.btnResetLooks.addEventListener("click", async () => {
+      for (const kind of ["background", "buddy"]) {
+        const old = state.looks[kind];
+        if (old && old.mode === "upload" && old.key) await idbDelete(old.key);
+      }
+      state.looks = JSON.parse(JSON.stringify(defaultLooks));
+      await rebuildImageUrls();
+      saveMeta();
+    });
+  }
+
   ui.btnReset.addEventListener("click", async () => {
     if (!confirm("Reset custom weapons and browser save?")) return;
     localStorage.removeItem(SAVE_KEY);
     await idbClear();
     state.weapons = defaultWeapons.map(sanitizeWeapon);
+    state.looks = JSON.parse(JSON.stringify(defaultLooks));
     state.selectedId = "bat";
     state.coins = 0;
     state.combo = 1;
