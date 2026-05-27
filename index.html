@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Buddy Build - Cartoon Sandbox Maker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div>
+        <h1>Buddy Build</h1>
+        <p>A PB-like cartoon sandbox with a custom weapon maker.</p>
+      </div>
+      <div class="topActions">
+        <button id="btnExport">Export Project</button>
+        <label class="fileBtn">
+          Import Project
+          <input id="projectImport" type="file" accept=".buddybuild,.json,application/json" />
+        </label>
+        <button id="btnReset">Reset Save</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="stageWrap">
+        <canvas id="game" width="960" height="540" aria-label="Buddy Build game canvas"></canvas>
+        <div class="mobileHint">Tap the buddy or the room. Drag to aim throwable weapons.</div>
+      </section>
+
+      <aside class="side">
+        <section class="card stats">
+          <div>
+            <span class="label">Coins</span>
+            <strong id="coins">0</strong>
+          </div>
+          <div>
+            <span class="label">Combo</span>
+            <strong id="combo">x1</strong>
+          </div>
+          <div>
+            <span class="label">Mood</span>
+            <strong id="mood">Fine</strong>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="cardHead">
+            <h2>Weapons</h2>
+            <button id="btnNewWeapon">+ Custom</button>
+          </div>
+          <div id="weaponList" class="weaponList"></div>
+        </section>
+
+        <section class="card">
+          <div class="cardHead">
+            <h2>Custom Looks</h2>
+            <button id="btnResetLooks">Reset Looks</button>
+          </div>
+
+          <div class="lookGrid">
+            <div class="lookSlot">
+              <div>
+                <strong>Background</strong>
+                <small>Upload a room/background PNG or use assets/my_bg.png</small>
+              </div>
+              <div class="lookControls">
+                <label class="fileBtn smallFile">
+                  Upload
+                  <input id="bgUpload" type="file" accept="image/png,image/webp,image/jpeg" />
+                </label>
+                <input id="bgPath" placeholder="assets/my_bg.png" />
+                <button id="btnApplyBg">Apply</button>
+              </div>
+            </div>
+
+            <div class="lookSlot">
+              <div>
+                <strong>Buddy</strong>
+                <small>Upload a custom buddy/character PNG or use assets/my_buddy.png</small>
+              </div>
+              <div class="lookControls">
+                <label class="fileBtn smallFile">
+                  Upload
+                  <input id="buddyUpload" type="file" accept="image/png,image/webp,image/jpeg" />
+                </label>
+                <input id="buddyPath" placeholder="assets/my_buddy.png" />
+                <button id="btnApplyBuddy">Apply</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card mini">
+          <h2>How custom PNGs work</h2>
+          <p>
+            Default PNGs are real files in <code>assets/</code>.
+            Uploaded custom PNGs are stored in your browser save and exported inside
+            <code>.buddybuild</code> projects.
+          </p>
+          <p>
+            You can also type a path like <code>assets/my_weapon.png</code> after putting that PNG in the folder.
+          </p>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <dialog id="weaponDialog">
+    <form id="weaponForm" method="dialog">
+      <div class="dialogHead">
+        <h2>Custom Weapon Maker</h2>
+        <button value="cancel" class="ghost">Close</button>
+      </div>
+
+      <div class="grid2">
+        <label>
+          Name
+          <input id="weaponName" required maxlength="24" placeholder="Example: Frying Pan" />
+        </label>
+
+        <label>
+          Type
+          <select id="weaponType">
+            <option value="melee">Melee / tap hit</option>
+            <option value="projectile">Projectile / drag shoot</option>
+            <option value="explosive">Explosive / blast</option>
+            <option value="drop">Drop from above</option>
+          </select>
+        </label>
+
+        <label>
+          Damage
+          <input id="weaponDamage" type="range" min="1" max="50" value="12" />
+          <span id="weaponDamageText">12</span>
+        </label>
+
+        <label>
+          Knockback
+          <input id="weaponForce" type="range" min="1" max="80" value="25" />
+          <span id="weaponForceText">25</span>
+        </label>
+
+        <label>
+          Size
+          <input id="weaponSize" type="range" min="24" max="110" value="58" />
+          <span id="weaponSizeText">58</span>
+        </label>
+
+        <label>
+          Cooldown ms
+          <input id="weaponCooldown" type="number" min="80" max="5000" value="350" />
+        </label>
+      </div>
+
+      <div class="assetBox">
+        <label>
+          Upload custom PNG
+          <input id="weaponPng" type="file" accept="image/png,image/webp,image/jpeg" />
+        </label>
+
+        <label>
+          Or use PNG path in the project folder
+          <input id="weaponPath" placeholder="assets/my_weapon.png" />
+        </label>
+
+        <div class="previewBox">
+          <img id="weaponPreview" alt="weapon preview" />
+          <span>Preview</span>
+        </div>
+      </div>
+
+      <menu class="dialogActions">
+        <button id="btnSaveWeapon" value="default">Save Weapon</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <script src="game.js"></script>
+</body>
+</html>
